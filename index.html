@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemistry Formula Practice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #11998e;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: #f0fff4;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            color: #11998e;
+            font-weight: bold;
+        }
+
+        .timer {
+            color: #38ef7d;
+        }
+
+        .mode-buttons {
+            text-align: center;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.95em;
+            color: #333;
+            font-weight: 600;
+        }
+
+        select {
+            padding: 10px 15px;
+            font-size: 1em;
+            border: 2px solid #11998e;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #38ef7d;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        button {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        button.evil {
+            background: linear-gradient(135deg, #8B0000 0%, #FF0000 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(139, 0, 0, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.8); }
+        }
+
+        .questions-container {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .question {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #11998e;
+            position: relative;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .question-text {
+            font-size: 1.1em;
+            color: #333;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .chemical-formula {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .hint-button {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            margin: 0;
+            background: #ffc107;
+            color: #333;
+        }
+
+        .hint-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .hint-box.show {
+            display: block;
+        }
+
+        .hint-box strong {
+            color: #856404;
+        }
+
+        .answer-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        input[type="number"] {
+            padding: 10px;
+            font-size: 1em;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 80px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 1em;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            width: 200px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #11998e;
+        }
+
+        .coefficient-input {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .feedback {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .feedback.correct {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .feedback.incorrect {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .score-container {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .score-container h2 {
+            color: #11998e;
+            margin-bottom: 10px;
+        }
+
+        .score {
+            font-size: 2em;
+            color: #38ef7d;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            select {
+                min-width: 100%;
+            }
+            .controls-row {
+                flex-direction: column;
+            }
+            .stats-bar {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chemistry Formula Practice</h1>
+        <p class="subtitle">Master stoichiometry, balancing, and reaction types</p>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-label">Questions Today</div>
+                <div class="stat-value" id="questionsToday">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Correct Today</div>
+                <div class="stat-value" id="correctToday">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Accuracy</div>
+                <div class="stat-value" id="accuracy">0%</div>
+            </div>
+            <div class="stat-item" id="timerDisplay" style="display: none;">
+                <div class="stat-label">Time Elapsed</div>
+                <div class="stat-value timer" id="timerValue">0:00</div>
+            </div>
+        </div>
+
+        <div class="mode-buttons">
+            <button id="stoichBtn" onclick="switchQuestionMode('stoichiometry')" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">Stoichiometry</button>
+            <button id="balanceBtn" onclick="switchQuestionMode('balancing')" style="background: #6c757d;">Balancing Equations</button>
+            <button id="reactionBtn" onclick="switchQuestionMode('reaction')" style="background: #6c757d;">Reaction Types</button>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button id="practiceModeBtn" onclick="switchPracticeMode('practice')" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">Practice (5 Questions)</button>
+            <button id="worksheetModeBtn" onclick="switchPracticeMode('worksheet')" style="background: #6c757d;">Worksheet (10 Questions)</button>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="difficulty">Difficulty Level:</label>
+                <select id="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                    <option value="evil">😈 EVIL MODE 😈</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="equationSourceControl">
+                <label for="equationSource">Equation Source:</label>
+                <select id="equationSource">
+                    <option value="common" selected>Common Reactions</option>
+                    <option value="random">Random Compounds</option>
+                </select>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="timerToggle">
+                <label for="timerToggle">Enable Timer</label>
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button id="generateBtn" onclick="generateQuestions()">Generate Questions</button>
+        </div>
+
+        <div class="questions-container" id="questionsContainer"></div>
+
+        <div class="button-container" id="checkBtnContainer" style="display: none;">
+            <button id="checkBtn" onclick="checkAnswers()">Check Answers</button>
+            <button onclick="generateQuestions()">Try New Questions</button>
+            <button class="secondary" onclick="resetStats()">Reset Stats</button>
+        </div>
+
+        <div class="score-container" id="scoreContainer">
+            <h2>Your Score</h2>
+            <div class="score" id="score"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestions = [];
+        let questionMode = 'stoichiometry'; // 'stoichiometry', 'balancing', 'reaction'
+        let practiceMode = 'practice'; // 'practice' or 'worksheet'
+        let timerInterval = null;
+        let timerSeconds = 0;
+        let stats = {
+            questionsToday: 0,
+            correctToday: 0
+        };
+
+        // Common reactions database
+        const commonReactions = {
+            synthesis: [
+                { reactants: ['2H₂', 'O₂'], products: ['2H₂O'], type: 'synthesis' },
+                { reactants: ['2Na', 'Cl₂'], products: ['2NaCl'], type: 'synthesis' },
+                { reactants: ['2Mg', 'O₂'], products: ['2MgO'], type: 'synthesis' },
+                { reactants: ['N₂', '3H₂'], products: ['2NH₃'], type: 'synthesis' }
+            ],
+            decomposition: [
+                { reactants: ['2H₂O'], products: ['2H₂', 'O₂'], type: 'decomposition' },
+                { reactants: ['2NaCl'], products: ['2Na', 'Cl₂'], type: 'decomposition' },
+                { reactants: ['2HgO'], products: ['2Hg', 'O₂'], type: 'decomposition' },
+                { reactants: ['CaCO₃'], products: ['CaO', 'CO₂'], type: 'decomposition' }
+            ],
+            combustion: [
+                { reactants: ['CH₄', '2O₂'], products: ['CO₂', '2H₂O'], type: 'combustion' },
+                { reactants: ['C₃H₈', '5O₂'], products: ['3CO₂', '4H₂O'], type: 'combustion' },
+                { reactants: ['2C₂H₆', '7O₂'], products: ['4CO₂', '6H₂O'], type: 'combustion' }
+            ],
+            singleReplacement: [
+                { reactants: ['Zn', '2HCl'], products: ['ZnCl₂', 'H₂'], type: 'single replacement' },
+                { reactants: ['Mg', '2HCl'], products: ['MgCl₂', 'H₂'], type: 'single replacement' },
+                { reactants: ['Cu', '2AgNO₃'], products: ['Cu(NO₃)₂', '2Ag'], type: 'single replacement' }
+            ],
+            doubleReplacement: [
+                { reactants: ['NaCl', 'AgNO₃'], products: ['NaNO₃', 'AgCl'], type: 'double replacement' },
+                { reactants: ['BaCl₂', 'Na₂SO₄'], products: ['2NaCl', 'BaSO₄'], type: 'double replacement' },
+                { reactants: ['HCl', 'NaOH'], products: ['NaCl', 'H₂O'], type: 'double replacement' }
+            ]
+        };
+
+        function switchQuestionMode(mode) {
+            questionMode = mode;
+            const stoichBtn = document.getElementById('stoichBtn');
+            const balanceBtn = document.getElementById('balanceBtn');
+            const reactionBtn = document.getElementById('reactionBtn');
+            const equationSourceControl = document.getElementById('equationSourceControl');
+
+            stoichBtn.style.background = '#6c757d';
+            balanceBtn.style.background = '#6c757d';
+            reactionBtn.style.background = '#6c757d';
+
+            if (mode === 'stoichiometry') {
+                stoichBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                equationSourceControl.style.display = 'flex';
+            } else if (mode === 'balancing') {
+                balanceBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                equationSourceControl.style.display = 'flex';
+            } else {
+                reactionBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                equationSourceControl.style.display = 'flex';
+            }
+
+            clearQuestions();
+        }
+
+        function switchPracticeMode(mode) {
+            practiceMode = mode;
+            const practiceBtn = document.getElementById('practiceModeBtn');
+            const worksheetBtn = document.getElementById('worksheetModeBtn');
+            const generateBtn = document.getElementById('generateBtn');
+
+            if (mode === 'practice') {
+                practiceBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                worksheetBtn.style.background = '#6c757d';
+                generateBtn.textContent = 'Generate 5 Questions';
+            } else {
+                practiceBtn.style.background = '#6c757d';
+                worksheetBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                generateBtn.textContent = 'Generate 10 Questions';
+            }
+
+            clearQuestions();
+        }
+
+        function clearQuestions() {
+            document.getElementById('questionsContainer').innerHTML = '';
+            document.getElementById('questionsContainer').style.display = 'none';
+            document.getElementById('checkBtnContainer').style.display = 'none';
+            document.getElementById('scoreContainer').style.display = 'none';
+            stopTimer();
+        }
+
+        function loadStats() {
+            const today = new Date().toDateString();
+            const savedStats = localStorage.getItem('chem-stats');
+            const savedDate = localStorage.getItem('chem-stats-date');
+            
+            if (savedDate === today && savedStats) {
+                stats = JSON.parse(savedStats);
+            } else {
+                stats = { questionsToday: 0, correctToday: 0 };
+                localStorage.setItem('chem-stats-date', today);
+            }
+            updateStatsDisplay();
+        }
+
+        function saveStats() {
+            localStorage.setItem('chem-stats', JSON.stringify(stats));
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('questionsToday').textContent = stats.questionsToday;
+            document.getElementById('correctToday').textContent = stats.correctToday;
+            const accuracy = stats.questionsToday > 0 
+                ? Math.round((stats.correctToday / stats.questionsToday) * 100) 
+                : 0;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+
+        function resetStats() {
+            if (confirm('Are you sure you want to reset your progress stats?')) {
+                stats = { questionsToday: 0, correctToday: 0 };
+                saveStats();
+                updateStatsDisplay();
+            }
+        }
+
+        function startTimer() {
+            const timerEnabled = document.getElementById('timerToggle').checked;
+            if (!timerEnabled) return;
+
+            timerSeconds = 0;
+            document.getElementById('timerDisplay').style.display = 'block';
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timerSeconds / 60);
+            const seconds = timerSeconds % 60;
+            document.getElementById('timerValue').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function getRandomReaction() {
+            const allReactions = Object.values(commonReactions).flat();
+            return allReactions[Math.floor(Math.random() * allReactions.length)];
+        }
+
+        function generateQuestions() {
+            currentQuestions = [];
+            const questionsContainer = document.getElementById('questionsContainer');
+            const checkBtnContainer = document.getElementById('checkBtnContainer');
+            const scoreContainer = document.getElementById('scoreContainer');
+
+            questionsContainer.innerHTML = '';
+            scoreContainer.style.display = 'none';
+
+            const numQuestions = practiceMode === 'practice' ? 5 : 10;
+
+            for (let i = 0; i < numQuestions; i++) {
+                let question;
+                if (questionMode === 'stoichiometry') {
+                    question = generateStoichiometryQuestion();
+                } else if (questionMode === 'balancing') {
+                    question = generateBalancingQuestion();
+                } else {
+                    question = generateReactionTypeQuestion();
+                }
+                
+                currentQuestions.push(question);
+
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question';
+                questionDiv.innerHTML = question.html;
+                questionsContainer.appendChild(questionDiv);
+            }
+
+            questionsContainer.style.display = 'block';
+            checkBtnContainer.style.display = 'block';
+            
+            if (practiceMode === 'practice') {
+                startTimer();
+            }
+        }
+
+        function generateStoichiometryQuestion() {
+            const reaction = getRandomReaction();
+            const difficulty = document.getElementById('difficulty').value;
+            
+            // Pick a reactant and product
+            const givenCompound = reaction.reactants[Math.floor(Math.random() * reaction.reactants.length)];
+            const findCompound = reaction.products[Math.floor(Math.random() * reaction.products.length)];
+            
+            // Extract coefficients
+            const givenCoeff = parseFloat(givenCompound.match(/^(\d*\.?\d*)/)[0] || 1);
+            const findCoeff = parseFloat(findCompound.match(/^(\d*\.?\d*)/)[0] || 1);
+            const givenFormula = givenCompound.replace(/^(\d*\.?\d*)/, '');
+            const findFormula = findCompound.replace(/^(\d*\.?\d*)/, '');
+            
+            // Generate amount based on difficulty
+            let givenMoles;
+            if (difficulty === 'easy') givenMoles = Math.floor(Math.random() * 5) + 1;
+            else if (difficulty === 'medium') givenMoles = (Math.random() * 10 + 0.5).toFixed(1);
+            else if (difficulty === 'hard') givenMoles = (Math.random() * 20 + 0.5).toFixed(2);
+            else givenMoles = (Math.random() * 50 + 0.1).toFixed(3); // evil
+            
+            const answer = (givenMoles * findCoeff / givenCoeff).toFixed(3);
+            
+            const equation = reaction.reactants.join(' + ') + ' → ' + reaction.products.join(' + ');
+            
+            let html = `
+                <div class="question-header">
+                    <div class="question-text">${currentQuestions.length + 1}. If you have ${givenMoles} moles of ${givenFormula}, how many moles of ${findFormula} can you make?</div>
+                    ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${currentQuestions.length})">💡 Hint</button>` : ''}
+                </div>
+                ${practiceMode === 'practice' ? `
+                <div class="hint-box" id="hint${currentQuestions.length}">
+                    <strong>Balanced Equation:</strong> ${equation}<br>
+                    <strong>Given:</strong> ${givenMoles} mol ${givenFormula}<br>
+                    <strong>Find:</strong> moles of ${findFormula}
+                </div>
+                ` : ''}
+                <div class="chemical-formula">${equation}</div>
+                <div class="answer-input">
+                    <input type="number" step="0.001" id="answer${currentQuestions.length}" placeholder="Answer">
+                    <span>moles of ${findFormula}</span>
+                </div>
+                <div class="feedback" id="feedback${currentQuestions.length}"></div>
+            `;
+            
+            return {
+                type: 'stoichiometry',
+                answer: parseFloat(answer),
+                html: html,
+                steps: `Mole ratio: ${givenCoeff} ${givenFormula} : ${findCoeff} ${findFormula}. Calculation: ${givenMoles} mol × (${findCoeff}/${givenCoeff}) = ${answer} mol`
+            };
+        }
+
+        function generateBalancingQuestion() {
+            const reaction = getRandomReaction();
+            
+            // Create unbalanced version by removing coefficients
+            const reactants = reaction.reactants.map(r => r.replace(/^(\d*\.?\d*)/, ''));
+            const products = reaction.products.map(p => p.replace(/^(\d*\.?\d*)/, ''));
+            const correctCoeffs = reaction.reactants.concat(reaction.products).map(c => 
+                parseFloat(c.match(/^(\d*\.?\d*)/)[0] || 1)
+            );
+            
+            const equation = reactants.join(' + ') + ' → ' + products.join(' + ');
+            const allCompounds = reactants.concat(products);
+            
+            let html = `
+                <div class="question-header">
+                    <div class="question-text">${currentQuestions.length + 1}. Balance this equation:</div>
+                    ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${currentQuestions.length})">💡 Hint</button>` : ''}
+                </div>
+                ${practiceMode === 'practice' ? `
+                <div class="hint-box" id="hint${currentQuestions.length}">
+                    <strong>Tip:</strong> Count atoms on each side<br>
+                    <strong>Strategy:</strong> Balance one element at a time, starting with the most complex compound
+                </div>
+                ` : ''}
+                <div class="chemical-formula">${equation}</div>
+                <div class="answer-input">
+                    ${allCompounds.map((c, i) => `
+                        <div class="coefficient-input">
+                            <input type="number" step="1" min="1" id="coeff${currentQuestions.length}_${i}" placeholder="?" style="width: 60px;">
+                            <span>${c}</span>
+                            ${i === reactants.length - 1 ? '<span style="margin: 0 10px;">→</span>' : (i < allCompounds.length - 1 ? '<span style="margin: 0 5px;">+</span>' : '')}
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="feedback" id="feedback${currentQuestions.length}"></div>
+            `;
+            
+            return {
+                type: 'balancing',
+                answer: correctCoeffs,
+                numCompounds: allCompounds.length,
+                html: html,
+                steps: `Correct coefficients: ${reaction.reactants.join(' + ')} → ${reaction.products.join(' + ')}`
+            };
+        }
+
+        function generateReactionTypeQuestion() {
+            const reaction = getRandomReaction();
+            
+            // Create unbalanced version
+            const reactants = reaction.reactants.map(r => r.replace(/^(\d*\.?\d*)/, ''));
+            const products = reaction.products.map(p => p.replace(/^(\d*\.?\d*)/, ''));
+            const correctCoeffs = reaction.reactants.concat(reaction.products).map(c => 
+                parseFloat(c.match(/^(\d*\.?\d*)/)[0] || 1)
+            );
+            
+            const equation = reactants.join(' + ') + ' → ' + products.join(' + ');
+            const allCompounds = reactants.concat(products);
+            
+            let html = `
+                <div class="question-header">
+                    <div class="question-text">${currentQuestions.length + 1}. Balance this equation AND identify the reaction type:</div>
+                    ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${currentQuestions.length})">💡 Hint</button>` : ''}
+                </div>
+                ${practiceMode === 'practice' ? `
+                <div class="hint-box" id="hint${currentQuestions.length}">
+                    <strong>Reaction patterns:</strong><br>
+                    • A + B → AB (synthesis)<br>
+                    • AB → A + B (decomposition)<br>
+                    • Hydrocarbon + O₂ → CO₂ + H₂O (combustion)<br>
+                    • A + BC → AC + B (single replacement)<br>
+                    • AB + CD → AD + CB (double replacement)
+                </div>
+                ` : ''}
+                <div class="chemical-formula">${equation}</div>
+                <div class="answer-input">
+                    ${allCompounds.map((c, i) => `
+                        <div class="coefficient-input">
+                            <input type="number" step="1" min="1" id="coeff${currentQuestions.length}_${i}" placeholder="?" style="width: 60px;">
+                            <span>${c}</span>
+                            ${i === reactants.length - 1 ? '<span style="margin: 0 10px;">→</span>' : (i < allCompounds.length - 1 ? '<span style="margin: 0 5px;">+</span>' : '')}
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="margin-top: 15px;">
+                    <label><strong>Reaction Type:</strong></label>
+                    <input type="text" id="reactionType${currentQuestions.length}" placeholder="Enter reaction type">
+                </div>
+                <div class="feedback" id="feedback${currentQuestions.length}"></div>
+            `;
+            
+            return {
+                type: 'reaction',
+                answer: correctCoeffs,
+                reactionType: reaction.type,
+                numCompounds: allCompounds.length,
+                html: html,
+                steps: `Correct: ${reaction.reactants.join(' + ')} → ${reaction.products.join(' + ')} (${reaction.type})`
+            };
+        }
+
+        function toggleHint(index) {
+            const hintBox = document.getElementById(`hint${index}`);
+            hintBox.classList.toggle('show');
+        }
+
+        function checkAnswers() {
+            let correct = 0;
+            stopTimer();
+
+            currentQuestions.forEach((q, i) => {
+                const feedback = document.getElementById(`feedback${i}`);
+                stats.questionsToday++;
+
+                if (q.type === 'stoichiometry') {
+                    const userAnswer = parseFloat(document.getElementById(`answer${i}`).value);
+                    if (isNaN(userAnswer)) {
+                        feedback.className = 'feedback incorrect';
+                        feedback.textContent = 'Please enter an answer';
+                    } else if (Math.abs(userAnswer - q.answer) < 0.01) {
+                        feedback.className = 'feedback correct';
+                        feedback.textContent = '✓ Correct!';
+                        correct++;
+                        stats.correctToday++;
+                    } else {
+                        feedback.className = 'feedback incorrect';
+                        feedback.innerHTML = `✗ Incorrect. The answer is ${q.answer.toFixed(3)} moles<br><strong>Steps:</strong> ${q.steps}`;
+                    }
+                } else if (q.type === 'balancing') {
+                    const userCoeffs = [];
+                    let allFilled = true;
+                    for (let j = 0; j < q.numCompounds; j++) {
+                        const val = parseInt(document.getElementById(`coeff${i}_${j}`).value);
+                        if (isNaN(val)) {
+                            allFilled = false;
+                            break;
+                        }
+                        userCoeffs.push(val);
+                    }
+                    
+                    if (!allFilled) {
+                        feedback.className = 'feedback incorrect';
+                        feedback.textContent = 'Please fill in all coefficients';
+                    } else if (JSON.stringify(userCoeffs) === JSON.stringify(q.answer)) {
+                        feedback.className = 'feedback correct';
+                        feedback.textContent = '✓ Correct!';
+                        correct++;
+                        stats.correctToday++;
+                    } else {
+                        feedback.className = 'feedback incorrect';
+                        feedback.innerHTML = `✗ Incorrect.<br><strong>Correct answer:</strong> ${q.steps}`;
+                    }
+                } else if (q.type === 'reaction') {
+                    const userCoeffs = [];
+                    let allFilled = true;
+                    for (let j = 0; j < q.numCompounds; j++) {
+                        const val = parseInt(document.getElementById(`coeff${i}_${j}`).value);
+                        if (isNaN(val)) {
+                            allFilled = false;
+                            break;
+                        }
+                        userCoeffs.push(val);
+                    }
+                    
+                    const userType = document.getElementById(`reactionType${i}`).value.toLowerCase().trim();
+                    
+                    if (!allFilled || !userType) {
+                        feedback.className = 'feedback incorrect';
+                        feedback.textContent = 'Please fill in all coefficients and reaction type';
+                    } else {
+                        const coeffsCorrect = JSON.stringify(userCoeffs) === JSON.stringify(q.answer);
+                        const typeCorrect = userType === q.reactionType;
+                        
+                        if (coeffsCorrect && typeCorrect) {
+                            feedback.className = 'feedback correct';
+                            feedback.textContent = '✓ Correct!';
+                            correct++;
+                            stats.correctToday++;
+                        } else {
+                            feedback.className = 'feedback incorrect';
+                            let msg = '✗ Incorrect. ';
+                            if (!coeffsCorrect) msg += 'Wrong coefficients. ';
+                            if (!typeCorrect) msg += `Wrong reaction type. `;
+                            feedback.innerHTML = msg + `<br><strong>Correct answer:</strong> ${q.steps}`;
+                        }
+                    }
+                }
+            });
+
+            saveStats();
+            updateStatsDisplay();
+
+            const scoreContainer = document.getElementById('scoreContainer');
+            const scoreElement = document.getElementById('score');
+            const total = practiceMode === 'practice' ? 5 : 10;
+            scoreElement.textContent = `${correct} / ${total}`;
+            scoreContainer.style.display = 'block';
+            scoreContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        loadStats();
+    </script>
+</body>
+</html>
