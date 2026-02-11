@@ -368,6 +368,8 @@
             <button id="stoichBtn" onclick="switchQuestionMode('stoichiometry')" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">Stoichiometry</button>
             <button id="balanceBtn" onclick="switchQuestionMode('balancing')" style="background: #6c757d;">Balancing Equations</button>
             <button id="reactionBtn" onclick="switchQuestionMode('reaction')" style="background: #6c757d;">Reaction Types</button>
+            <button id="molarMassBtn" onclick="switchQuestionMode('molarMass')" style="background: #6c757d;">Molar Mass</button>
+            <button id="atomsBtn" onclick="switchQuestionMode('atoms')" style="background: #6c757d;">Counting Atoms</button>
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
@@ -462,28 +464,46 @@
 
         function switchQuestionMode(mode) {
             questionMode = mode;
+
             const stoichBtn = document.getElementById('stoichBtn');
             const balanceBtn = document.getElementById('balanceBtn');
             const reactionBtn = document.getElementById('reactionBtn');
+            const molarMassBtn = document.getElementById('molarMassBtn');
+            const atomsBtn = document.getElementById('atomsBtn');
             const equationSourceControl = document.getElementById('equationSourceControl');
-
+        
+            // Reset all button backgrounds
             stoichBtn.style.background = '#6c757d';
             balanceBtn.style.background = '#6c757d';
             reactionBtn.style.background = '#6c757d';
-
+            molarMassBtn.style.background = '#6c757d';
+            atomsBtn.style.background = '#6c757d';
+        
+            // Activate selected mode
             if (mode === 'stoichiometry') {
                 stoichBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
                 equationSourceControl.style.display = 'flex';
-            } else if (mode === 'balancing') {
+            } 
+            else if (mode === 'balancing') {
                 balanceBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
                 equationSourceControl.style.display = 'flex';
-            } else {
+            } 
+            else if (mode === 'reaction') {
                 reactionBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
                 equationSourceControl.style.display = 'flex';
+            } 
+            else if (mode === 'molarMass') {
+                molarMassBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                equationSourceControl.style.display = 'none';
+            } 
+            else if (mode === 'atoms') {
+                atomsBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                equationSourceControl.style.display = 'none';
             }
-
+        
             clearQuestions();
         }
+
 
         function switchPracticeMode(mode) {
             practiceMode = mode;
@@ -582,40 +602,53 @@
 
         function generateQuestions() {
             currentQuestions = [];
+        
             const questionsContainer = document.getElementById('questionsContainer');
             const checkBtnContainer = document.getElementById('checkBtnContainer');
             const scoreContainer = document.getElementById('scoreContainer');
-
+        
             questionsContainer.innerHTML = '';
             scoreContainer.style.display = 'none';
-
+        
             const numQuestions = practiceMode === 'practice' ? 5 : 10;
-
+        
             for (let i = 0; i < numQuestions; i++) {
+        
                 let question;
+        
                 if (questionMode === 'stoichiometry') {
                     question = generateStoichiometryQuestion();
-                } else if (questionMode === 'balancing') {
+                } 
+                else if (questionMode === 'balancing') {
                     question = generateBalancingQuestion();
-                } else {
+                } 
+                else if (questionMode === 'reaction') {
                     question = generateReactionTypeQuestion();
+                } 
+                else if (questionMode === 'molarMass') {
+                    question = generateMolarMassQuestion();
+                } 
+                else if (questionMode === 'atoms') {
+                    question = generateAtomCountingQuestion();
                 }
-                
+        
                 currentQuestions.push(question);
-
+        
                 const questionDiv = document.createElement('div');
                 questionDiv.className = 'question';
                 questionDiv.innerHTML = question.html;
+        
                 questionsContainer.appendChild(questionDiv);
             }
 
-            questionsContainer.style.display = 'block';
-            checkBtnContainer.style.display = 'block';
-            
-            if (practiceMode === 'practice') {
-                startTimer();
-            }
-        }
+    questionsContainer.style.display = 'block';
+    checkBtnContainer.style.display = 'block';
+
+    if (practiceMode === 'practice') {
+        startTimer();
+    }
+}
+
 
         function generateStoichiometryQuestion() {
             const reaction = getRandomReaction();
@@ -718,49 +751,44 @@
 
         function generateReactionTypeQuestion() {
             const reaction = getRandomReaction();
-            
-            // Create unbalanced version
+        
             const reactants = reaction.reactants.map(r => r.replace(/^(\d*\.?\d*)/, ''));
             const products = reaction.products.map(p => p.replace(/^(\d*\.?\d*)/, ''));
-            const correctCoeffs = reaction.reactants.concat(reaction.products).map(c => 
+            const correctCoeffs = reaction.reactants.concat(reaction.products).map(c =>
                 parseFloat(c.match(/^(\d*\.?\d*)/)[0] || 1)
             );
-            
+        
             const equation = reactants.join(' + ') + ' → ' + products.join(' + ');
             const allCompounds = reactants.concat(products);
-            
+        
             let html = `
                 <div class="question-header">
-                    <div class="question-text">${currentQuestions.length + 1}. Balance this equation AND identify the reaction type:</div>
-                    ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${currentQuestions.length})">💡 Hint</button>` : ''}
+                    <div class="question-text">
+                        ${currentQuestions.length + 1}. Balance this equation AND identify the reaction type:
+                    </div>
                 </div>
-                ${practiceMode === 'practice' ? `
-                <div class="hint-box" id="hint${currentQuestions.length}">
-                    <strong>Reaction patterns:</strong><br>
-                    • A + B → AB (synthesis)<br>
-                    • AB → A + B (decomposition)<br>
-                    • Hydrocarbon + O₂ → CO₂ + H₂O (combustion)<br>
-                    • A + BC → AC + B (single replacement)<br>
-                    • AB + CD → AD + CB (double replacement)
-                </div>
-                ` : ''}
+        
                 <div class="chemical-formula">${equation}</div>
+        
                 <div class="answer-input">
                     ${allCompounds.map((c, i) => `
                         <div class="coefficient-input">
-                            <input type="number" step="1" min="1" id="coeff${currentQuestions.length}_${i}" placeholder="?" style="width: 60px;">
+                            <input type="number" min="1" id="coeff${currentQuestions.length}_${i}" style="width: 60px;">
                             <span>${c}</span>
-                            ${i === reactants.length - 1 ? '<span style="margin: 0 10px;">→</span>' : (i < allCompounds.length - 1 ? '<span style="margin: 0 5px;">+</span>' : '')}
+                            ${i === reactants.length - 1 ? '<span style="margin:0 10px;">→</span>' :
+                            (i < allCompounds.length - 1 ? '<span style="margin:0 5px;">+</span>' : '')}
                         </div>
                     `).join('')}
                 </div>
-                <div style="margin-top: 15px;">
+        
+                <div style="margin-top:15px;">
                     <label><strong>Reaction Type:</strong></label>
-                    <input type="text" id="reactionType${currentQuestions.length}" placeholder="Enter reaction type">
+                    <input type="text" id="reactionType${currentQuestions.length}">
                 </div>
+        
                 <div class="feedback" id="feedback${currentQuestions.length}"></div>
             `;
-            
+        
             return {
                 type: 'reaction',
                 answer: correctCoeffs,
@@ -770,107 +798,196 @@
                 steps: `Correct: ${reaction.reactants.join(' + ')} → ${reaction.products.join(' + ')} (${reaction.type})`
             };
         }
-
+        
+        
+        /* ===========================
+           NEW QUESTION MODES
+        =========================== */
+        
+        function generateMolarMassQuestion() {
+        
+            const formulas = ["H2O", "CO2", "NaCl", "MgCl2", "CaCO3", "NH3"];
+            const formula = formulas[Math.floor(Math.random() * formulas.length)];
+        
+            const parsed = parseFormula(formula);
+            let totalMass = 0;
+        
+            for (let element in parsed) {
+                totalMass += atomicMasses[element] * parsed[element];
+            }
+        
+            totalMass = totalMass.toFixed(2);
+        
+            let html = `
+                <div class="question-header">
+                    <div class="question-text">
+                        ${currentQuestions.length + 1}. What is the molar mass of ${formula}?
+                    </div>
+                </div>
+                <div class="chemical-formula">${formula}</div>
+                <div class="answer-input">
+                    <input type="number" step="0.01" id="answer${currentQuestions.length}">
+                    <span>g/mol</span>
+                </div>
+                <div class="feedback" id="feedback${currentQuestions.length}"></div>
+            `;
+        
+            return {
+                type: 'molarMass',
+                answer: parseFloat(totalMass),
+                html: html,
+                steps: `Molar mass = ${totalMass} g/mol`
+            };
+        }
+        
+        
+        function generateAtomCountingQuestion() {
+        
+            const formulas = ["H2O", "CO2", "CaCO3", "Na2SO4", "MgCl2"];
+            const formula = formulas[Math.floor(Math.random() * formulas.length)];
+            const parsed = parseFormula(formula);
+        
+            const elementList = Object.keys(parsed);
+            const element = elementList[Math.floor(Math.random() * elementList.length)];
+        
+            let html = `
+                <div class="question-header">
+                    <div class="question-text">
+                        ${currentQuestions.length + 1}. How many ${element} atoms are in ${formula}?
+                    </div>
+                </div>
+                <div class="chemical-formula">${formula}</div>
+                <div class="answer-input">
+                    <input type="number" id="answer${currentQuestions.length}">
+                    <span>atoms</span>
+                </div>
+                <div class="feedback" id="feedback${currentQuestions.length}"></div>
+            `;
+        
+            return {
+                type: 'atoms',
+                answer: parsed[element],
+                html: html,
+                steps: `${formula} contains ${parsed[element]} ${element} atoms`
+            };
+        }
+        
+        
+        /* ===========================
+           FORMULA PARSER
+        =========================== */
+        
+        function parseFormula(formula) {
+            const elementRegex = /([A-Z][a-z]*)(\d*)/g;
+            let result = {};
+            let match;
+        
+            while ((match = elementRegex.exec(formula)) !== null) {
+                const element = match[1];
+                const count = parseInt(match[2]) || 1;
+                result[element] = (result[element] || 0) + count;
+            }
+        
+            return result;
+        }
+        
+        
+        /* ===========================
+           HINT TOGGLE
+        =========================== */
+        
         function toggleHint(index) {
             const hintBox = document.getElementById(`hint${index}`);
-            hintBox.classList.toggle('show');
+            if (hintBox) hintBox.classList.toggle('show');
         }
-
+        
+        
+        /* ===========================
+           CHECK ANSWERS
+        =========================== */
+        
         function checkAnswers() {
+        
             let correct = 0;
             stopTimer();
-
+        
             currentQuestions.forEach((q, i) => {
                 const feedback = document.getElementById(`feedback${i}`);
                 stats.questionsToday++;
-
+        
                 if (q.type === 'stoichiometry') {
                     const userAnswer = parseFloat(document.getElementById(`answer${i}`).value);
-                    if (isNaN(userAnswer)) {
-                        feedback.className = 'feedback incorrect';
-                        feedback.textContent = 'Please enter an answer';
-                    } else if (Math.abs(userAnswer - q.answer) < 0.01) {
+        
+                    if (Math.abs(userAnswer - q.answer) < 0.01) {
                         feedback.className = 'feedback correct';
                         feedback.textContent = '✓ Correct!';
                         correct++;
                         stats.correctToday++;
                     } else {
                         feedback.className = 'feedback incorrect';
-                        feedback.innerHTML = `✗ Incorrect. The answer is ${q.answer.toFixed(3)} moles<br><strong>Steps:</strong> ${q.steps}`;
+                        feedback.innerHTML = `✗ Incorrect.<br><strong>Correct:</strong> ${q.steps}`;
                     }
-                } else if (q.type === 'balancing') {
-                    const userCoeffs = [];
-                    let allFilled = true;
-                    for (let j = 0; j < q.numCompounds; j++) {
-                        const val = parseInt(document.getElementById(`coeff${i}_${j}`).value);
-                        if (isNaN(val)) {
-                            allFilled = false;
-                            break;
-                        }
-                        userCoeffs.push(val);
-                    }
-                    
-                    if (!allFilled) {
-                        feedback.className = 'feedback incorrect';
-                        feedback.textContent = 'Please fill in all coefficients';
-                    } else if (JSON.stringify(userCoeffs) === JSON.stringify(q.answer)) {
+                }
+        
+                else if (q.type === 'molarMass' || q.type === 'atoms') {
+                    const userAnswer = parseFloat(document.getElementById(`answer${i}`).value);
+        
+                    if (Math.abs(userAnswer - q.answer) < 0.05) {
                         feedback.className = 'feedback correct';
                         feedback.textContent = '✓ Correct!';
                         correct++;
                         stats.correctToday++;
                     } else {
                         feedback.className = 'feedback incorrect';
-                        feedback.innerHTML = `✗ Incorrect.<br><strong>Correct answer:</strong> ${q.steps}`;
+                        feedback.innerHTML = `✗ Incorrect.<br><strong>Correct:</strong> ${q.steps}`;
                     }
-                } else if (q.type === 'reaction') {
+                }
+        
+                else if (q.type === 'balancing' || q.type === 'reaction') {
+        
                     const userCoeffs = [];
-                    let allFilled = true;
+                    let valid = true;
+        
                     for (let j = 0; j < q.numCompounds; j++) {
                         const val = parseInt(document.getElementById(`coeff${i}_${j}`).value);
                         if (isNaN(val)) {
-                            allFilled = false;
+                            valid = false;
                             break;
                         }
                         userCoeffs.push(val);
                     }
-                    
-                    const userType = document.getElementById(`reactionType${i}`).value.toLowerCase().trim();
-                    
-                    if (!allFilled || !userType) {
-                        feedback.className = 'feedback incorrect';
-                        feedback.textContent = 'Please fill in all coefficients and reaction type';
+        
+                    const coeffsCorrect = JSON.stringify(userCoeffs) === JSON.stringify(q.answer);
+        
+                    let typeCorrect = true;
+                    if (q.type === 'reaction') {
+                        const userType = document.getElementById(`reactionType${i}`).value.toLowerCase().trim();
+                        typeCorrect = userType === q.reactionType;
+                    }
+        
+                    if (valid && coeffsCorrect && typeCorrect) {
+                        feedback.className = 'feedback correct';
+                        feedback.textContent = '✓ Correct!';
+                        correct++;
+                        stats.correctToday++;
                     } else {
-                        const coeffsCorrect = JSON.stringify(userCoeffs) === JSON.stringify(q.answer);
-                        const typeCorrect = userType === q.reactionType;
-                        
-                        if (coeffsCorrect && typeCorrect) {
-                            feedback.className = 'feedback correct';
-                            feedback.textContent = '✓ Correct!';
-                            correct++;
-                            stats.correctToday++;
-                        } else {
-                            feedback.className = 'feedback incorrect';
-                            let msg = '✗ Incorrect. ';
-                            if (!coeffsCorrect) msg += 'Wrong coefficients. ';
-                            if (!typeCorrect) msg += `Wrong reaction type. `;
-                            feedback.innerHTML = msg + `<br><strong>Correct answer:</strong> ${q.steps}`;
-                        }
+                        feedback.className = 'feedback incorrect';
+                        feedback.innerHTML = `✗ Incorrect.<br><strong>Correct:</strong> ${q.steps}`;
                     }
                 }
             });
-
+        
             saveStats();
             updateStatsDisplay();
-
-            const scoreContainer = document.getElementById('scoreContainer');
-            const scoreElement = document.getElementById('score');
+        
             const total = practiceMode === 'practice' ? 5 : 10;
-            scoreElement.textContent = `${correct} / ${total}`;
-            scoreContainer.style.display = 'block';
-            scoreContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            document.getElementById('score').textContent = `${correct} / ${total}`;
+            document.getElementById('scoreContainer').style.display = 'block';
         }
-
+        
+        
+        /* ===========================
+           INIT
+        =========================== */
+        
         loadStats();
-    </script>
-</body>
-</html>
