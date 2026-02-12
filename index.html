@@ -845,5 +845,94 @@ function checkAnswers() {
   loadStats();
 })();
 </script>
+
+<script>
+/* ===== OVERRIDES: Formatting + Reaction Types Fix ===== */
+
+function formatChemHTML(str) {
+  const escaped = escapeHtml(str);
+  const withCoeffSpace = escaped.replace(/(^|[\s\+→])(\d+)(?=[A-Z(])/g, '$1$2&nbsp;');
+  return withCoeffSpace.replace(/([A-Za-z\)])(\d+)/g, '$1<sub>$2</sub>');
+}
+
+function markIncorrect(el, details) {
+  el.className = 'feedback incorrect';
+  el.innerHTML = `✗ Incorrect.<br>${formatChemHTML(details)}`;
+}
+
+const REACTION_TYPE_CHOICES = [
+  'synthesis',
+  'decomposition',
+  'single replacement',
+  'double replacement',
+  'combustion'
+];
+
+function titleCase(s) {
+  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function generateReactionTypeQuestion() {
+  const reaction = getReactionByDifficulty();
+  const idx = currentQuestions.length;
+
+  const reactants = reaction.reactants.map(r => r.replace(/^(\d+)/,''));
+  const products  = reaction.products.map(p => p.replace(/^(\d+)/,''));
+
+  const eqPlain = reactants.join(' + ') + ' → ' + products.join(' + ');
+  const eqHTML  = formatChemHTML(eqPlain);
+
+  const choices = shuffle([...REACTION_TYPE_CHOICES]);
+
+  const html = `
+    <div class="question-header">
+      <div class="question-text">${idx + 1}. Identify the reaction type:</div>
+    </div>
+    <div class="chemical-formula">${eqHTML}</div>
+    <div style="margin-top:12px;">
+      ${choices.map((t) => `
+        <label style="display:block; margin:6px 0;">
+          <input type="radio" name="rtype${idx}" value="${t}" />
+          ${titleCase(t)}
+        </label>
+      `).join('')}
+    </div>
+    <div class="feedback" id="feedback${idx}"></div>
+  `;
+
+  return {
+    type: 'reaction',
+    reactionType: normalizeType(reaction.type),
+    steps: `Correct type: ${reaction.type}. Example: ${reaction.reactants.join(' + ')} → ${reaction.products.join(' + ')}`,
+    html
+  };
+}
+
+/* Patch checkAnswers for reaction-only grading */
+const originalCheckAnswers = checkAnswers;
+checkAnswers = function() {
+  let correct = 0;
+
+  currentQuestions.forEach((q, i) => {
+    const feedback = document.getElementById(`feedback${i}`);
+
+    if (q.type === 'reaction') {
+      const picked = document.querySelector(`input[name="rtype${i}"]:checked`);
+      const raw = (picked ? picked.value : '')
+        .toLowerCase().trim().replace(/[-_]+/g,' ').replace(/\s+/g,' ');
+      const typeCorrect = q.reactionType.has(raw);
+
+      if (typeCorrect) {
+        markCorrect(feedback); correct++; stats.correctToday++;
+      } else {
+        markIncorrect(feedback, q.steps);
+      }
+    }
+  });
+
+  originalCheckAnswers();
+};
+</script>
+
 </body>
 </html>
