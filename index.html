@@ -934,5 +934,55 @@ checkAnswers = function() {
 };
 </script>
 
+
+<script>
+/* ===== OVERRIDE: Atom Counting prompt uses subscripts ===== */
+function generateAtomCountingQuestion() {
+  const p = getDifficultyProfile();
+  const pool = formulaPools[p.formulaPool] || formulaPools.medium;
+  const formula = pickOne(pool);
+  const parsed = parseFormula(formula);
+  const elements = Object.keys(parsed);
+
+  const askTotal = Math.random() < p.atomAskTotalChance;
+  const multiplier = randomInt(1, p.atomMaxMultiplier);
+
+  const multText = (multiplier === 1) ? '' : (multiplier + ' × ');
+  const formulaHTML = formatChemHTML(formula);
+  const formulaInlineHTML = `${multText}<span class="chemical-formula">${formulaHTML}</span>`;
+
+  let correct, questionInnerHTML;
+
+  if (askTotal) {
+    const totalAtomsOne = elements.reduce((sum, el) => sum + parsed[el], 0);
+    correct = totalAtomsOne * multiplier;
+    questionInnerHTML = `${escapeHtml(String(currentQuestions.length + 1))}. How many total atoms are in ${formulaInlineHTML}?`;
+  } else {
+    const element = pickOne(elements);
+    correct = parsed[element] * multiplier;
+    questionInnerHTML = `${escapeHtml(String(currentQuestions.length + 1))}. How many ${escapeHtml(element)} atoms are in ${formulaInlineHTML}?`;
+  }
+
+  const idx = currentQuestions.length;
+  const displayLine = (multiplier === 1)
+    ? formatChemHTML(formula)
+    : (multiplier + ' × ' + formatChemHTML(formula));
+
+  const html = `
+    <div class="question-header">
+      <div class="question-text">${questionInnerHTML}</div>
+    </div>
+    <div class="chemical-formula">${displayLine}</div>
+    <div class="answer-input">
+      <input id="answer${idx}" type="number" min="0" placeholder="Answer" />
+      <span>atoms</span>
+    </div>
+    <div class="feedback" id="feedback${idx}"></div>
+  `;
+
+  return { type: 'atoms', answer: correct, steps: `Count atoms in ${multText}${formula}.`, html };
+}
+</script>
+
 </body>
 </html>
