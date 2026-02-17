@@ -45,9 +45,8 @@
     .stat-item { text-align: center; }
     .stat-label { font-size: 0.9em; color: #666; margin-bottom: 5px; }
     .stat-value { font-size: 1.5em; color: #11998e; font-weight: 700; }
-    .timer { color: #38ef7d; }
 
-    .mode-buttons, .practice-buttons {
+    .mode-buttons {
       text-align: center;
       margin-bottom: 16px;
       display: flex;
@@ -248,19 +247,11 @@
         <div class="stat-label">Accuracy</div>
         <div class="stat-value" id="accuracy">0%</div>
       </div>
-      <div class="stat-item" id="timerDisplay" style="display:none;">
-        <div class="stat-label">Time Elapsed</div>
-        <div class="stat-value timer" id="timerValue">0:00</div>
-      </div>
     </div>
 
     <div class="mode-buttons">
       <button id="stoichBtn" onclick="switchQuestionMode('stoichiometry')">Stoichiometry</button>
       <button id="balanceBtn" class="secondary" onclick="switchQuestionMode('balancing')">Balancing Equations</button>
-    </div>
-
-    <div class="practice-buttons">
-      <button id="practiceModeBtn" onclick="switchPracticeMode('practice')">Practice (5 Questions)</button>
     </div>
 
     <div class="controls-row">
@@ -271,11 +262,6 @@
           <option value="mole-to-mass">Mole to Mass</option>
           <option value="mass-to-mass">Mass to Mass</option>
         </select>
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="timerToggle">
-        <label for="timerToggle">Enable Timer (Practice only)</label>
       </div>
     </div>
 
@@ -301,9 +287,6 @@
 <script>
 let currentQuestions = [];
 let questionMode = 'stoichiometry';
-let practiceMode = 'practice';
-let timerInterval = null;
-let timerSeconds = 0;
 let stats = { questionsToday: 0, correctToday: 0 };
 
 function getDifficultyProfile() {
@@ -444,32 +427,25 @@ function switchQuestionMode(mode) {
   clearQuestions();
 }
 
-function switchPracticeMode(mode) {
-  practiceMode = mode;
-  setActiveButton('practiceModeBtn', ['practiceModeBtn']);
-  clearQuestions();
-}
 
-function clearQuestions() {
+(function init() {
+  setActiveButton('stoichBtn', ['stoichBtn','balanceBtn']);
+  document.getElementById('stoichTypeControl').style.display = 'flex';
+  updateDifficultyNote();
+  loadStats();
+})();function clearQuestions() {
   document.getElementById('questionsContainer').innerHTML = '';
   document.getElementById('questionsContainer').style.display = 'none';
   document.getElementById('checkBtnContainer').style.display = 'none';
   document.getElementById('scoreContainer').style.display = 'none';
-  stopTimer();
 }
 
 function loadStats() {
-  const today = new Date().toDateString();
-  const savedStats = localStorage.getItem('chem-stats');
-  const savedDate = localStorage.getItem('chem-stats-date');
-  if (savedDate === today && savedStats) stats = JSON.parse(savedStats);
-  else {
-    stats = { questionsToday: 0, correctToday: 0 };
-    localStorage.setItem('chem-stats-date', today);
-  }
+  const saved = sessionStorage.getItem('chem-stats');
+  if (saved) stats = JSON.parse(saved);
   updateStatsDisplay();
 }
-function saveStats() { localStorage.setItem('chem-stats', JSON.stringify(stats)); }
+function saveStats() { sessionStorage.setItem('chem-stats', JSON.stringify(stats)); }
 function updateStatsDisplay() {
   document.getElementById('questionsToday').textContent = stats.questionsToday;
   document.getElementById('correctToday').textContent = stats.correctToday;
@@ -477,27 +453,11 @@ function updateStatsDisplay() {
   document.getElementById('accuracy').textContent = accuracy + '%';
 }
 function resetStats() {
-  if (confirm('Reset progress stats for today?')) {
+  if (confirm('Reset stats?')) {
     stats = { questionsToday: 0, correctToday: 0 };
     saveStats();
     updateStatsDisplay();
   }
-}
-
-function startTimer() {
-  if (!document.getElementById('timerToggle').checked) return;
-  timerSeconds = 0;
-  document.getElementById('timerDisplay').style.display = 'block';
-  updateTimerDisplay();
-  timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(); }, 1000);
-}
-function stopTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-function updateTimerDisplay() {
-  const minutes = Math.floor(timerSeconds / 60);
-  const seconds = timerSeconds % 60;
-  document.getElementById('timerValue').textContent = `${minutes}:${String(seconds).padStart(2,'0')}`;
 }
 
 function pickOne(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -519,8 +479,7 @@ function generateQuestions() {
   qc.innerHTML = '';
   sc.style.display = 'none';
 
-  const num = (practiceMode === 'practice') ? 5 : 10;
-  for (let i = 0; i < num; i++) {
+  for (let i = 0; i < 5; i++) {
     let q;
     if (questionMode === 'stoichiometry') q = generateStoichiometryQuestion();
     else q = generateBalancingQuestion();
@@ -534,7 +493,6 @@ function generateQuestions() {
   }
   qc.style.display = 'block';
   cb.style.display = 'block';
-  if (practiceMode === 'practice') startTimer(); else stopTimer();
 }
 
 function generateStoichiometryQuestion() {
@@ -600,13 +558,12 @@ function generateStoichiometryQuestion() {
   const html = `
     <div class="question-header">
       <div class="question-text">${idx + 1}. ${questionText}</div>
-      ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${idx})">&#128161; Hint</button>` : ''}
+      <button class="hint-button" onclick="toggleHint(${idx})">&#128161; Hint</button>
     </div>
-    ${practiceMode === 'practice' ? `
-      <div class="hint-box" id="hint${idx}">
-        <strong>Balanced Equation:</strong> ${eqHTML}<br>
-        ${hintExtra}
-      </div>` : ''}
+    <div class="hint-box" id="hint${idx}">
+      <strong>Balanced Equation:</strong> ${eqHTML}<br>
+      ${hintExtra}
+    </div>
     <div class="chemical-formula">${eqHTML}</div>
     <div class="answer-input">
       <input type="number" step="0.01" id="answer${idx}" placeholder="Answer">
@@ -633,13 +590,12 @@ function generateBalancingQuestion() {
   const html = `
     <div class="question-header">
       <div class="question-text">${idx + 1}. Balance this equation:</div>
-      ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${idx})">💡 Hint</button>` : ''}
+      <button class="hint-button" onclick="toggleHint(${idx})">&#128161; Hint</button>
     </div>
-    ${practiceMode === 'practice' ? `
-      <div class="hint-box" id="hint${idx}">
-        <strong>Tip:</strong> Count atoms on each side.<br>
-        <strong>Strategy:</strong> Start with the most complex compound.
-      </div>` : ''}
+    <div class="hint-box" id="hint${idx}">
+      <strong>Tip:</strong> Count atoms on each side.<br>
+      <strong>Strategy:</strong> Start with the most complex compound.
+    </div>
     <div class="chemical-formula">${eqHTML}</div>
     <div class="answer-input">
       ${allCompounds.map((c, i) => `
@@ -676,7 +632,6 @@ let answersChecked = false;
 
 function checkAnswers() {
   let correct = 0;
-  stopTimer();
 
   currentQuestions.forEach((q, i) => {
     const feedback = document.getElementById('feedback' + i);
@@ -716,14 +671,12 @@ function checkAnswers() {
   }
   answersChecked = true;
 
-  const total = (practiceMode === 'practice') ? 5 : 10;
-  document.getElementById('score').textContent = `${correct} / ${total}`;
+  document.getElementById('score').textContent = `${correct} / 5`;
   document.getElementById('scoreContainer').style.display = 'block';
 }
 
 (function init() {
   setActiveButton('stoichBtn', ['stoichBtn','balanceBtn']);
-  setActiveButton('practiceModeBtn', ['practiceModeBtn']);
   document.getElementById('stoichTypeControl').style.display = 'flex';
   updateDifficultyNote();
   loadStats();
