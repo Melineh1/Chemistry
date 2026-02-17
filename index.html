@@ -264,12 +264,12 @@
     </div>
 
     <div class="controls-row">
-      <div class="control-group">
-        <label for="difficulty">Difficulty Level:</label>
+      <div class="control-group" id="stoichTypeControl">
+        <label for="difficulty">Stoichiometry Type:</label>
         <select id="difficulty">
-          <option value="easy" selected>Easy</option>
-          <option value="hard">Hard</option>
-          <option value="evil">😈 EVIL MODE 😈</option>
+          <option value="mole-to-mole" selected>Mole to Mole</option>
+          <option value="mole-to-mass">Mole to Mass</option>
+          <option value="mass-to-mass">Mass to Mass</option>
         </select>
       </div>
 
@@ -308,22 +308,75 @@ let stats = { questionsToday: 0, correctToday: 0 };
 
 function getDifficultyProfile() {
   const d = document.getElementById('difficulty').value;
-
-  if (d === 'easy') {
-    return { key:'easy', molesMax: 6, molesDecimals: 0, reactionPools: ['easy'] };
+  if (d === 'mole-to-mole') {
+    return { key:'mole-to-mole', molesMax: 10, molesDecimals: 1, reactionPools: ['easy','medium'] };
   }
-  if (d === 'hard') {
-    return { key:'hard', molesMax: 28, molesDecimals: 2, reactionPools: ['medium','hard'] };
+  if (d === 'mole-to-mass') {
+    return { key:'mole-to-mass', molesMax: 10, molesDecimals: 1, reactionPools: ['easy','medium','hard'] };
   }
-  return { key:'evil', molesMax: 60, molesDecimals: 3, reactionPools: ['hard','evil'] };
+  return { key:'mass-to-mass', gramsMax: 200, reactionPools: ['medium','hard','evil'] };
 }
 
 function updateDifficultyNote() {
-  const msgByMode = {
-    stoichiometry: 'Difficulty scales: larger numbers + more decimal precision.',
-    balancing: 'Difficulty scales: more complex equations + larger coefficients.'
+  const isStoich = questionMode === 'stoichiometry';
+  if (!isStoich) {
+    document.getElementById('difficultyNote').textContent = 'Difficulty scales: more complex equations + larger coefficients.';
+    return;
+  }
+  const d = document.getElementById('difficulty').value;
+  const msgs = {
+    'mole-to-mole': 'Use the mole ratio from the balanced equation to convert between moles of reactants and products.',
+    'mole-to-mass': 'Convert moles of a reactant to grams of a product using the mole ratio and molar mass.',
+    'mass-to-mass': 'Convert grams of a reactant to grams of a product using molar mass and the mole ratio.'
   };
-  document.getElementById('difficultyNote').textContent = msgByMode[questionMode] || '';
+  document.getElementById('difficultyNote').textContent = msgs[d] || '';
+}
+
+const atomicMasses = {
+  H: 1.008, He: 4.003, C: 12.011, N: 14.007, O: 15.999, F: 19.00, Ne: 20.18,
+  Na: 22.990, Mg: 24.305, Al: 26.982, Si: 28.086, P: 30.974, S: 32.06, Cl: 35.453,
+  K: 39.098, Ca: 40.078, Fe: 55.845, Cu: 63.546, Zn: 65.38, Ag: 107.868, Ba: 137.327,
+  Cr: 51.996, Ag: 107.868, Ba: 137.327
+};
+
+function calcMolarMass(formula) {
+  let i = 0;
+  function parseGroup() {
+    const counts = {};
+    while (i < formula.length) {
+      const ch = formula[i];
+      if (ch === '(') {
+        i++;
+        const inner = parseGroup();
+        i++; // skip ')'
+        const mult = parseNum() || 1;
+        for (const el in inner) counts[el] = (counts[el] || 0) + inner[el] * mult;
+        continue;
+      }
+      if (ch === ')') break;
+      const el = parseEl();
+      const n = parseNum() || 1;
+      counts[el] = (counts[el] || 0) + n;
+    }
+    return counts;
+  }
+  function parseEl() {
+    let el = formula[i++];
+    if (i < formula.length && /[a-z]/.test(formula[i])) el += formula[i++];
+    return el;
+  }
+  function parseNum() {
+    let s = i;
+    while (i < formula.length && /\d/.test(formula[i])) i++;
+    return s === i ? null : parseInt(formula.slice(s, i));
+  }
+  const counts = parseGroup();
+  let mass = 0;
+  for (const el in counts) {
+    if (!atomicMasses[el]) throw new Error('Unknown element: ' + el);
+    mass += atomicMasses[el] * counts[el];
+  }
+  return mass;
 }
 
 document.getElementById('difficulty').addEventListener('change', () => {
@@ -386,6 +439,7 @@ function switchQuestionMode(mode) {
   questionMode = mode;
   const id = mode === 'stoichiometry' ? 'stoichBtn' : 'balanceBtn';
   setActiveButton(id, ['stoichBtn','balanceBtn']);
+  document.getElementById('stoichTypeControl').style.display = mode === 'stoichiometry' ? 'flex' : 'none';
   updateDifficultyNote();
   clearQuestions();
 }
@@ -486,49 +540,77 @@ function generateQuestions() {
 function generateStoichiometryQuestion() {
   const p = getDifficultyProfile();
   const reaction = getReactionByDifficulty();
+  const key = p.key;
 
-  // Pick given from reactants, find from products — ensure formulas differ
+  // Pick given (reactant) and find (product)
   const givenCompound = pickOne(reaction.reactants);
-  const givenFormula = givenCompound.replace(/^(\d+)/,'');
+  const givenFormula  = givenCompound.replace(/^(\d+)/,'');
+  const givenCoeff    = parseFloat((givenCompound.match(/^(\d+)/) || [])[1] || 1);
+
   const distinctProducts = reaction.products.filter(c => c.replace(/^(\d+)/,'') !== givenFormula);
-  const productPool = distinctProducts.length > 0 ? distinctProducts : reaction.products;
+  const productPool  = distinctProducts.length > 0 ? distinctProducts : reaction.products;
   const findCompound = pickOne(productPool);
-
-  const givenCoeff = parseFloat((givenCompound.match(/^(\d+)/) || [])[1] || 1);
-  const findCoeff  = parseFloat((findCompound.match(/^(\d+)/) || [])[1] || 1);
   const findFormula  = findCompound.replace(/^(\d+)/,'');
+  const findCoeff    = parseFloat((findCompound.match(/^(\d+)/) || [])[1] || 1);
 
-  let givenMoles;
-  if (p.molesDecimals === 0) givenMoles = randomInt(1, p.molesMax);
-  else givenMoles = Number(((Math.random() * (p.molesMax - 0.2)) + 0.2).toFixed(p.molesDecimals));
-
-  // Round answer to match difficulty precision, tolerance is half a unit at that precision
-  const decimals = p.molesDecimals === 0 ? 2 : p.molesDecimals + 1;
-  const answer = Number((givenMoles * findCoeff / givenCoeff).toFixed(decimals));
-  const tolerance = 0.5;
-
-  const idx = currentQuestions.length;
   const eqPlain = reaction.reactants.join(' + ') + ' \u2192 ' + reaction.products.join(' + ');
-  const eqHTML = formatEquationHTML(eqPlain);
+  const eqHTML  = formatEquationHTML(eqPlain);
+  const idx     = currentQuestions.length;
 
-  const stepStr = `${givenMoles} mol ${givenFormula} x (${findCoeff} mol ${findFormula} / ${givenCoeff} mol ${givenFormula}) = ${answer} mol`;
+  let givenAmount, answer, tolerance, questionText, answerUnits, stepStr, hintExtra;
+
+  if (key === 'mole-to-mole') {
+    // Given: moles of reactant → Find: moles of product
+    givenAmount = Number(((Math.random() * (p.molesMax - 0.5)) + 0.5).toFixed(p.molesDecimals));
+    answer      = Number((givenAmount * findCoeff / givenCoeff).toFixed(3));
+    tolerance   = 0.5;
+    questionText = `If you have <b>${givenAmount} moles</b> of ${formatEquationHTML(givenFormula)}, how many <b>moles</b> of ${formatEquationHTML(findFormula)} can be produced?`;
+    answerUnits  = `moles of ${formatEquationHTML(findFormula)}`;
+    stepStr      = `${givenAmount} mol ${givenFormula} x (${findCoeff} mol ${findFormula} / ${givenCoeff} mol ${givenFormula}) = ${answer} mol ${findFormula}`;
+    hintExtra    = `<strong>Mole ratio:</strong> ${findCoeff} mol ${formatEquationHTML(findFormula)} per ${givenCoeff} mol ${formatEquationHTML(givenFormula)}`;
+
+  } else if (key === 'mole-to-mass') {
+    // Given: moles of reactant → Find: grams of product
+    const mmFind    = calcMolarMass(findFormula);
+    givenAmount     = Number(((Math.random() * (p.molesMax - 0.5)) + 0.5).toFixed(p.molesDecimals));
+    const molesFind = givenAmount * findCoeff / givenCoeff;
+    answer          = Number((molesFind * mmFind).toFixed(2));
+    tolerance       = answer * 0.02;
+    questionText    = `If you have <b>${givenAmount} moles</b> of ${formatEquationHTML(givenFormula)}, how many <b>grams</b> of ${formatEquationHTML(findFormula)} can be produced?`;
+    answerUnits     = `grams of ${formatEquationHTML(findFormula)}`;
+    stepStr         = `${givenAmount} mol ${givenFormula} x (${findCoeff}/${givenCoeff}) = ${molesFind.toFixed(4)} mol ${findFormula}; x ${mmFind.toFixed(3)} g/mol = ${answer} g`;
+    hintExtra       = `<strong>Mole ratio:</strong> ${findCoeff} mol ${formatEquationHTML(findFormula)} per ${givenCoeff} mol ${formatEquationHTML(givenFormula)}<br><strong>Molar mass of ${formatEquationHTML(findFormula)}:</strong> ${mmFind.toFixed(3)} g/mol`;
+
+  } else {
+    // mass-to-mass: Given: grams of reactant → Find: grams of product
+    const mmGiven   = calcMolarMass(givenFormula);
+    const mmFind    = calcMolarMass(findFormula);
+    const rawGrams  = Math.random() * (p.gramsMax - 5) + 5;
+    givenAmount     = Number(rawGrams.toFixed(1));
+    const molesGiven  = givenAmount / mmGiven;
+    const molesFind   = molesGiven * findCoeff / givenCoeff;
+    answer            = Number((molesFind * mmFind).toFixed(2));
+    tolerance         = answer * 0.02;
+    questionText      = `If you have <b>${givenAmount} grams</b> of ${formatEquationHTML(givenFormula)}, how many <b>grams</b> of ${formatEquationHTML(findFormula)} can be produced?`;
+    answerUnits       = `grams of ${formatEquationHTML(findFormula)}`;
+    stepStr           = `${givenAmount} g ${givenFormula} / ${mmGiven.toFixed(3)} g/mol = ${molesGiven.toFixed(4)} mol; x (${findCoeff}/${givenCoeff}) = ${molesFind.toFixed(4)} mol ${findFormula}; x ${mmFind.toFixed(3)} g/mol = ${answer} g`;
+    hintExtra         = `<strong>Molar mass of ${formatEquationHTML(givenFormula)}:</strong> ${mmGiven.toFixed(3)} g/mol<br><strong>Mole ratio:</strong> ${findCoeff} mol ${formatEquationHTML(findFormula)} per ${givenCoeff} mol ${formatEquationHTML(givenFormula)}<br><strong>Molar mass of ${formatEquationHTML(findFormula)}:</strong> ${mmFind.toFixed(3)} g/mol`;
+  }
 
   const html = `
     <div class="question-header">
-      <div class="question-text">${idx + 1}. If you have ${givenMoles} moles of ${formatEquationHTML(givenFormula)}, how many moles of ${formatEquationHTML(findFormula)} can you make?</div>
+      <div class="question-text">${idx + 1}. ${questionText}</div>
       ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${idx})">&#128161; Hint</button>` : ''}
     </div>
     ${practiceMode === 'practice' ? `
       <div class="hint-box" id="hint${idx}">
         <strong>Balanced Equation:</strong> ${eqHTML}<br>
-        <strong>Given:</strong> ${givenMoles} mol ${formatEquationHTML(givenFormula)}<br>
-        <strong>Find:</strong> mol ${formatEquationHTML(findFormula)}<br>
-        <strong>Mole ratio:</strong> ${findCoeff} mol ${formatEquationHTML(findFormula)} per ${givenCoeff} mol ${formatEquationHTML(givenFormula)}
+        ${hintExtra}
       </div>` : ''}
     <div class="chemical-formula">${eqHTML}</div>
     <div class="answer-input">
-      <input type="number" step="${Math.pow(10, -decimals)}" id="answer${idx}" placeholder="Answer">
-      <span>moles of ${formatEquationHTML(findFormula)}</span>
+      <input type="number" step="0.01" id="answer${idx}" placeholder="Answer">
+      <span>${answerUnits}</span>
     </div>
     <div class="feedback" id="feedback${idx}"></div>
   `;
@@ -607,7 +689,7 @@ function checkAnswers() {
         if (!answersChecked) { correct++; stats.correctToday++; }
         markCorrect(feedback);
       } else {
-        markIncorrect(feedback, q.steps);
+        markIncorrect(feedback, `${q.steps}  (accepted within ±${tol.toFixed(2)})`);
       }
     }
     else if (q.type === 'balancing') {
@@ -642,6 +724,7 @@ function checkAnswers() {
 (function init() {
   setActiveButton('stoichBtn', ['stoichBtn','balanceBtn']);
   setActiveButton('practiceModeBtn', ['practiceModeBtn']);
+  document.getElementById('stoichTypeControl').style.display = 'flex';
   updateDifficultyNote();
   loadStats();
 })();
