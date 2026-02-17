@@ -226,6 +226,40 @@
       .container { padding: 20px; }
       h1 { font-size: 2em; }
       .control-group { min-width: 100%; }
+      .worksheet-card { padding: 20px; }
+      .worksheet-controls .control-group { min-width: 100%; }
+    }
+    .worksheet-card {
+      max-width: 980px;
+      margin: 24px auto 0;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      padding: 32px 40px;
+    }
+    .worksheet-card h2 {
+      color: #11998e;
+      font-size: 1.5em;
+      margin-bottom: 6px;
+    }
+    .worksheet-card p.ws-desc {
+      color: #666;
+      font-size: 0.95em;
+      margin-bottom: 20px;
+    }
+    .worksheet-controls {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .worksheet-controls .control-group { min-width: 180px; }
+    .ws-status {
+      margin-top: 14px;
+      font-size: 0.95em;
+      color: #11998e;
+      min-height: 1.4em;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -233,7 +267,7 @@
 <body>
   <div class="container">
     <h1>Chemistry Formula Practice</h1>
-    <p class="subtitle">Stoichiometry • Balancing • Reaction Types • Molar Mass • Counting Atoms</p>
+    <p class="subtitle">Stoichiometry &bull; Balancing Equations</p>
 
     <div class="stats-bar">
       <div class="stat-item">
@@ -261,24 +295,15 @@
 
     <div class="practice-buttons">
       <button id="practiceModeBtn" onclick="switchPracticeMode('practice')">Practice (5 Questions)</button>
-      <button id="worksheetModeBtn" class="secondary" onclick="switchPracticeMode('worksheet')">Worksheet (10 Questions)</button>
     </div>
 
     <div class="controls-row">
       <div class="control-group">
         <label for="difficulty">Difficulty Level:</label>
         <select id="difficulty">
-          <option value="easy">Easy</option>
-          <option value="medium" selected>Medium</option>
+          <option value="easy" selected>Easy</option>
           <option value="hard">Hard</option>
           <option value="evil">😈 EVIL MODE 😈</option>
-        </select>
-      </div>
-
-      <div class="control-group" id="equationSourceControl">
-        <label for="equationSource">Equation Source:</label>
-        <select id="equationSource">
-          <option value="common" selected>Curated Reactions</option>
         </select>
       </div>
 
@@ -320,9 +345,6 @@ function getDifficultyProfile() {
 
   if (d === 'easy') {
     return { key:'easy', molesMax: 6, molesDecimals: 0, reactionPools: ['easy'] };
-  }
-  if (d === 'medium') {
-    return { key:'medium', molesMax: 14, molesDecimals: 1, reactionPools: ['easy','medium'] };
   }
   if (d === 'hard') {
     return { key:'hard', molesMax: 28, molesDecimals: 2, reactionPools: ['medium','hard'] };
@@ -398,15 +420,13 @@ function switchQuestionMode(mode) {
   questionMode = mode;
   const id = mode === 'stoichiometry' ? 'stoichBtn' : 'balanceBtn';
   setActiveButton(id, ['stoichBtn','balanceBtn']);
-  document.getElementById('equationSourceControl').style.display = 'flex';
   updateDifficultyNote();
   clearQuestions();
 }
 
 function switchPracticeMode(mode) {
   practiceMode = mode;
-  setActiveButton(mode === 'practice' ? 'practiceModeBtn' : 'worksheetModeBtn', ['practiceModeBtn','worksheetModeBtn']);
-  document.getElementById('generateBtn').textContent = (mode === 'practice') ? 'Generate 5 Questions' : 'Generate 10 Questions';
+  setActiveButton('practiceModeBtn', ['practiceModeBtn']);
   clearQuestions();
 }
 
@@ -472,6 +492,7 @@ function getReactionByDifficulty() {
 
 function generateQuestions() {
   currentQuestions = [];
+  answersChecked = false;
   const qc = document.getElementById('questionsContainer');
   const cb = document.getElementById('checkBtnContainer');
   const sc = document.getElementById('scoreContainer');
@@ -500,44 +521,53 @@ function generateStoichiometryQuestion() {
   const p = getDifficultyProfile();
   const reaction = getReactionByDifficulty();
 
+  // Pick given from reactants, find from products — ensure formulas differ
   const givenCompound = pickOne(reaction.reactants);
-  const findCompound = pickOne(reaction.products);
+  const givenFormula = givenCompound.replace(/^(\d+)/,'');
+  const distinctProducts = reaction.products.filter(c => c.replace(/^(\d+)/,'') !== givenFormula);
+  const productPool = distinctProducts.length > 0 ? distinctProducts : reaction.products;
+  const findCompound = pickOne(productPool);
 
   const givenCoeff = parseFloat((givenCompound.match(/^(\d+)/) || [])[1] || 1);
   const findCoeff  = parseFloat((findCompound.match(/^(\d+)/) || [])[1] || 1);
-  const givenFormula = givenCompound.replace(/^(\d+)/,'');
   const findFormula  = findCompound.replace(/^(\d+)/,'');
 
   let givenMoles;
   if (p.molesDecimals === 0) givenMoles = randomInt(1, p.molesMax);
   else givenMoles = Number(((Math.random() * (p.molesMax - 0.2)) + 0.2).toFixed(p.molesDecimals));
 
-  const answer = Number((givenMoles * findCoeff / givenCoeff).toFixed(3));
+  // Round answer to match difficulty precision, tolerance is half a unit at that precision
+  const decimals = p.molesDecimals === 0 ? 2 : p.molesDecimals + 1;
+  const answer = Number((givenMoles * findCoeff / givenCoeff).toFixed(decimals));
+  const tolerance = 0.5;
 
   const idx = currentQuestions.length;
-  const eqPlain = reaction.reactants.join(' + ') + ' → ' + reaction.products.join(' + ');
+  const eqPlain = reaction.reactants.join(' + ') + ' \u2192 ' + reaction.products.join(' + ');
   const eqHTML = formatEquationHTML(eqPlain);
+
+  const stepStr = `${givenMoles} mol ${givenFormula} x (${findCoeff} mol ${findFormula} / ${givenCoeff} mol ${givenFormula}) = ${answer} mol`;
 
   const html = `
     <div class="question-header">
       <div class="question-text">${idx + 1}. If you have ${givenMoles} moles of ${formatEquationHTML(givenFormula)}, how many moles of ${formatEquationHTML(findFormula)} can you make?</div>
-      ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${idx})">💡 Hint</button>` : ''}
+      ${practiceMode === 'practice' ? `<button class="hint-button" onclick="toggleHint(${idx})">&#128161; Hint</button>` : ''}
     </div>
     ${practiceMode === 'practice' ? `
       <div class="hint-box" id="hint${idx}">
         <strong>Balanced Equation:</strong> ${eqHTML}<br>
         <strong>Given:</strong> ${givenMoles} mol ${formatEquationHTML(givenFormula)}<br>
-        <strong>Find:</strong> mol ${formatEquationHTML(findFormula)}
+        <strong>Find:</strong> mol ${formatEquationHTML(findFormula)}<br>
+        <strong>Mole ratio:</strong> ${findCoeff} mol ${formatEquationHTML(findFormula)} per ${givenCoeff} mol ${formatEquationHTML(givenFormula)}
       </div>` : ''}
     <div class="chemical-formula">${eqHTML}</div>
     <div class="answer-input">
-      <input type="number" step="0.001" id="answer${idx}" placeholder="Answer">
+      <input type="number" step="${Math.pow(10, -decimals)}" id="answer${idx}" placeholder="Answer">
       <span>moles of ${formatEquationHTML(findFormula)}</span>
     </div>
     <div class="feedback" id="feedback${idx}"></div>
   `;
 
-  return { type:'stoichiometry', answer, steps: `${givenMoles} mol × (${findCoeff}/${givenCoeff}) = ${answer} mol`, html };
+  return { type:'stoichiometry', answer, tolerance, steps: stepStr, html };
 }
 
 function generateBalancingQuestion() {
@@ -591,22 +621,25 @@ function markCorrect(el) {
 }
 function markIncorrect(el, details) {
   el.className = 'feedback incorrect';
-  el.innerHTML = `✗ Incorrect.<br>${escapeHtml(details)}`;
+  el.innerHTML = `&#x2717; Incorrect.<br>${formatEquationHTML(escapeHtml(details))}`;
 }
 
+let answersChecked = false;
+
 function checkAnswers() {
-  const p = getDifficultyProfile();
   let correct = 0;
   stopTimer();
 
   currentQuestions.forEach((q, i) => {
     const feedback = document.getElementById('feedback' + i);
-    stats.questionsToday++;
+    if (!answersChecked) stats.questionsToday++;
 
     if (q.type === 'stoichiometry') {
       const userAnswer = parseFloat(document.getElementById('answer' + i).value);
-      if (!isNaN(userAnswer) && Math.abs(userAnswer - q.answer) < 0.01) {
-        markCorrect(feedback); correct++; stats.correctToday++;
+      const tol = q.tolerance ?? 0.5;
+      if (!isNaN(userAnswer) && Math.abs(userAnswer - q.answer) <= tol) {
+        if (!answersChecked) { correct++; stats.correctToday++; }
+        markCorrect(feedback);
       } else {
         markIncorrect(feedback, q.steps);
       }
@@ -621,15 +654,19 @@ function checkAnswers() {
       }
       const coeffsCorrect = JSON.stringify(userCoeffs) === JSON.stringify(q.answer);
       if (valid && coeffsCorrect) {
-        markCorrect(feedback); correct++; stats.correctToday++;
+        if (!answersChecked) { correct++; stats.correctToday++; }
+        markCorrect(feedback);
       } else {
         markIncorrect(feedback, q.steps);
       }
     }
   });
 
-  saveStats();
-  updateStatsDisplay();
+  if (!answersChecked) {
+    saveStats();
+    updateStatsDisplay();
+  }
+  answersChecked = true;
 
   const total = (practiceMode === 'practice') ? 5 : 10;
   document.getElementById('score').textContent = `${correct} / ${total}`;
@@ -638,10 +675,431 @@ function checkAnswers() {
 
 (function init() {
   setActiveButton('stoichBtn', ['stoichBtn','balanceBtn']);
-  setActiveButton('practiceModeBtn', ['practiceModeBtn','worksheetModeBtn']);
+  setActiveButton('practiceModeBtn', ['practiceModeBtn']);
   updateDifficultyNote();
   loadStats();
 })();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     WORKSHEET GENERATOR CARD
+════════════════════════════════════════════════════════════ -->
+  <div class="worksheet-card">
+    <h2>&#x1F4C4; Worksheet Generator</h2>
+    <p class="ws-desc">Generate a printable 2-page PDF — 10 questions on page&nbsp;1, full answer key on page&nbsp;2.</p>
+    <div class="worksheet-controls">
+      <div class="control-group">
+        <label for="wsType">Question Type:</label>
+        <select id="wsType">
+          <option value="stoichiometry">Stoichiometry</option>
+          <option value="balancing">Balancing Equations</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="wsDifficulty">Difficulty:</label>
+        <select id="wsDifficulty">
+          <option value="easy">Easy</option>
+          <option value="hard">Hard</option>
+          <option value="evil">&#x1F608; Evil Mode</option>
+        </select>
+      </div>
+      <div style="padding-bottom:2px;">
+        <button onclick="generateWorksheetPDF()">Generate &amp; Download PDF</button>
+      </div>
+    </div>
+    <div class="ws-status" id="wsStatus"></div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ── Worksheet PDF generator (client-side via jsPDF) ──────────────────────────
+
+const WS_REACTION_POOLS = {
+  easy:   reactionPools.easy,
+  medium: reactionPools.medium,
+  hard:   reactionPools.hard,
+  evil:   reactionPools.evil
+};
+
+const WS_PROFILES = {
+  easy: { molesMax: 6,  molesDecimals: 0, pools: ['easy'] },
+  hard: { molesMax: 28, molesDecimals: 2, pools: ['medium','hard'] },
+  evil: { molesMax: 60, molesDecimals: 3, pools: ['hard','evil'] },
+};
+
+function wsPickOne(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function wsRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function wsGetReaction(profile) {
+  const bag = [];
+  profile.pools.forEach(k => bag.push(...WS_REACTION_POOLS[k]));
+  return wsPickOne(bag);
+}
+
+function wsStripCoeff(s)  { return s.replace(/^\d+/,''); }
+function wsGetCoeff(s)    { const m = s.match(/^(\d+)/); return m ? parseInt(m[1]) : 1; }
+
+// Convert "H2O", "Cu(NO3)2" etc. into an array of {text, sub} segments for drawing
+function parseChemSegments(str) {
+  const segs = [];
+  let i = 0;
+  while (i < str.length) {
+    // collect non-digit chars
+    let word = '';
+    while (i < str.length && !/\d/.test(str[i])) { word += str[i]; i++; }
+    if (word) segs.push({ text: word, sub: false });
+    // collect digit chars
+    let num = '';
+    while (i < str.length && /\d/.test(str[i])) { num += str[i]; i++; }
+    if (num) segs.push({ text: num, sub: true });
+  }
+  return segs;
+}
+
+// Draw chemical formula with subscripts at (x,y). Returns width used.
+function drawChem(doc, str, x, y, mainSize, subSize) {
+  const segs = parseChemSegments(str);
+  let cx = x;
+  segs.forEach(seg => {
+    if (seg.sub) {
+      doc.setFontSize(subSize);
+      doc.text(seg.text, cx, y + 1.5);
+    } else {
+      doc.setFontSize(mainSize);
+      doc.text(seg.text, cx, y);
+    }
+    cx += doc.getStringUnitWidth(seg.text) * (seg.sub ? subSize : mainSize) / doc.internal.scaleFactor;
+  });
+  return cx - x;
+}
+
+// Measure width of a chemical string without drawing
+function measureChem(doc, str, mainSize, subSize) {
+  const segs = parseChemSegments(str);
+  let w = 0;
+  segs.forEach(seg => {
+    const sz = seg.sub ? subSize : mainSize;
+    w += doc.getStringUnitWidth(seg.text) * sz / doc.internal.scaleFactor;
+  });
+  return w;
+}
+
+// Draw a full equation: reactants → products. Returns final x.
+function drawEquation(doc, reactants, products, x, y, mainSize, subSize) {
+  const spaceW = doc.getStringUnitWidth(' ') * mainSize / doc.internal.scaleFactor;
+  const plusW  = doc.getStringUnitWidth(' + ') * mainSize / doc.internal.scaleFactor;
+  const arrowW = doc.getStringUnitWidth(' \u2192 ') * mainSize / doc.internal.scaleFactor;
+  let cx = x;
+
+  reactants.forEach((r, i) => {
+    cx += drawChem(doc, r, cx, y, mainSize, subSize);
+    if (i < reactants.length - 1) {
+      doc.setFontSize(mainSize);
+      doc.text(' + ', cx, y);
+      cx += plusW;
+    }
+  });
+  doc.setFontSize(mainSize);
+  doc.text(' \u2192 ', cx, y);
+  cx += arrowW;
+  products.forEach((p, i) => {
+    cx += drawChem(doc, p, cx, y, mainSize, subSize);
+    if (i < products.length - 1) {
+      doc.setFontSize(mainSize);
+      doc.text(' + ', cx, y);
+      cx += plusW;
+    }
+  });
+  return cx;
+}
+
+// Measure total equation width
+function measureEquation(doc, reactants, products, mainSize, subSize) {
+  const plusW  = doc.getStringUnitWidth(' + ') * mainSize / doc.internal.scaleFactor;
+  const arrowW = doc.getStringUnitWidth(' \u2192 ') * mainSize / doc.internal.scaleFactor;
+  let w = 0;
+  reactants.forEach((r,i) => {
+    w += measureChem(doc, r, mainSize, subSize);
+    if (i < reactants.length-1) w += plusW;
+  });
+  w += arrowW;
+  products.forEach((p,i) => {
+    w += measureChem(doc, p, mainSize, subSize);
+    if (i < products.length-1) w += plusW;
+  });
+  return w;
+}
+
+// ── Question generators ───────────────────────────────────────────────────────
+
+function wsMakeStoich(profile) {
+  const reaction = wsGetReaction(profile);
+  const givenCpd = wsPickOne(reaction.reactants);
+  const givenFormula = wsStripCoeff(givenCpd);
+  const givenCoeff   = wsGetCoeff(givenCpd);
+
+  const distinct = reaction.products.filter(p => wsStripCoeff(p) !== givenFormula);
+  const pool = distinct.length > 0 ? distinct : reaction.products;
+  const findCpd    = wsPickOne(pool);
+  const findFormula = wsStripCoeff(findCpd);
+  const findCoeff   = wsGetCoeff(findCpd);
+
+  const dec = profile.molesDecimals;
+  let givenMoles;
+  if (dec === 0) givenMoles = wsRandomInt(1, profile.molesMax);
+  else givenMoles = Number((Math.random() * (profile.molesMax - 0.2) + 0.2).toFixed(dec));
+
+  const decimals = dec === 0 ? 2 : dec + 1;
+  const answer = Number((givenMoles * findCoeff / givenCoeff).toFixed(decimals));
+
+  return {
+    type: 'stoichiometry',
+    reaction,
+    givenFormula, givenCoeff, givenMoles,
+    findFormula,  findCoeff,
+    answer,
+  };
+}
+
+function wsMakeBalancing(profile) {
+  const reaction = wsGetReaction(profile);
+  const bareReactants = reaction.reactants.map(wsStripCoeff);
+  const bareProducts  = reaction.products.map(wsStripCoeff);
+  const coeffs = reaction.reactants.concat(reaction.products).map(wsGetCoeff);
+  return { type: 'balancing', reaction, bareReactants, bareProducts, coeffs };
+}
+
+// ── PDF rendering ─────────────────────────────────────────────────────────────
+
+function generateWorksheetPDF() {
+  const { jsPDF } = window.jspdf;
+  const qtype      = document.getElementById('wsType').value;
+  const difficulty = document.getElementById('wsDifficulty').value;
+  const status     = document.getElementById('wsStatus');
+
+  status.textContent = 'Generating PDF…';
+
+  setTimeout(() => {
+    try {
+      const profile  = WS_PROFILES[difficulty];
+      const isStoich = qtype === 'stoichiometry';
+      const doc      = new jsPDF({ unit: 'pt', format: 'letter' });
+
+      const PW = 612, PH = 792;
+      const ML = 54, MR = 54, MT = 54;
+      const contentW = PW - ML - MR;
+
+      const MAIN = 11, SUB = 8;
+      const GREEN = [17, 153, 142];
+
+      // ── helper: draw page header ──────────────────────────────────────────
+      function drawHeader(pageLabel) {
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(18);
+        doc.setTextColor(17,153,142);
+        doc.text('Chemistry Worksheet', PW/2, MT + 14, { align:'center' });
+
+        const typeLabel = isStoich ? 'Stoichiometry' : 'Balancing Equations';
+        const diffLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(11);
+        doc.setTextColor(100,100,100);
+        doc.text(`${typeLabel}  |  ${diffLabel}  |  ${pageLabel}`, PW/2, MT + 30, { align:'center' });
+
+        doc.setDrawColor(...GREEN);
+        doc.setLineWidth(1);
+        doc.line(ML, MT + 38, PW - MR, MT + 38);
+
+        doc.setTextColor(0,0,0);
+        return MT + 54; // return y after header
+      }
+
+      // ── Generate 10 questions ─────────────────────────────────────────────
+      const questions = [];
+      for (let i = 0; i < 10; i++) {
+        questions.push(isStoich ? wsMakeStoich(profile) : wsMakeBalancing(profile));
+      }
+
+      // ══════════════════════════════════════════════
+      // PAGE 1: Questions
+      // ══════════════════════════════════════════════
+      let y = drawHeader('Questions');
+
+      // Name / Date / Score line
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(11);
+      doc.setTextColor(0,0,0);
+      doc.text('Name: _________________________    Date: ______________    Score: ______ / 10', ML, y);
+      y += 22;
+
+      doc.setDrawColor(200,200,200);
+      doc.setLineWidth(0.5);
+      doc.line(ML, y, PW-MR, y);
+      y += 14;
+
+      questions.forEach((q, idx) => {
+        const num = idx + 1;
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(MAIN);
+        doc.setTextColor(0,0,0);
+
+        if (q.type === 'stoichiometry') {
+          // Line 1: question number + "Given the reaction:"
+          doc.text(`${num}.`, ML, y);
+          doc.setFont('helvetica','normal');
+          doc.text(' Given the reaction:', ML + 18, y);
+          // Line 2: equation (indented)
+          y += 15;
+          doc.setFont('helvetica','normal');
+          doc.setTextColor(0,0,100);
+          drawEquation(doc, q.reaction.reactants, q.reaction.products, ML + 18, y, MAIN, SUB);
+          doc.setTextColor(0,0,0);
+          // Line 3: "If you have X mol [formula], how many mol [formula] can be produced?"
+          y += 16;
+          let cx = ML + 18;
+          doc.setFont('helvetica','normal');
+          doc.setFontSize(MAIN);
+          doc.text('If you have ', cx, y);
+          cx += doc.getStringUnitWidth('If you have ') * MAIN / doc.internal.scaleFactor;
+          doc.setFont('helvetica','bold');
+          doc.text(`${q.givenMoles} mol`, cx, y);
+          cx += doc.getStringUnitWidth(`${q.givenMoles} mol`) * MAIN / doc.internal.scaleFactor;
+          doc.setFont('helvetica','normal');
+          doc.text(' of ', cx, y);
+          cx += doc.getStringUnitWidth(' of ') * MAIN / doc.internal.scaleFactor;
+          cx += drawChem(doc, q.givenFormula, cx, y, MAIN, SUB);
+          doc.setFontSize(MAIN);
+          doc.text(', how many moles of ', cx, y);
+          cx += doc.getStringUnitWidth(', how many moles of ') * MAIN / doc.internal.scaleFactor;
+          cx += drawChem(doc, q.findFormula, cx, y, MAIN, SUB);
+          doc.setFontSize(MAIN);
+          doc.text(' can be produced?', cx, y);
+          // Answer blank
+          y += 16;
+          doc.text('Answer: ______________ mol', ML + 18, y);
+
+        } else {
+          // Balancing
+          doc.text(`${num}.`, ML, y);
+          doc.setFont('helvetica','normal');
+          doc.text(' Balance the following equation:', ML + 18, y);
+          y += 16;
+
+          // Draw blanks + bare formulas
+          const spaceW = doc.getStringUnitWidth('   ') * MAIN / doc.internal.scaleFactor;
+          const plusW  = doc.getStringUnitWidth(' + ') * MAIN / doc.internal.scaleFactor;
+          const arrowW = doc.getStringUnitWidth(' \u2192 ') * MAIN / doc.internal.scaleFactor;
+          const underW = 22;
+          let cx = ML + 18;
+
+          const allBare = q.bareReactants.concat(q.bareProducts);
+          allBare.forEach((formula, i) => {
+            // draw blank underline
+            doc.setDrawColor(0,0,0);
+            doc.setLineWidth(0.7);
+            doc.line(cx, y+1, cx + underW, y+1);
+            cx += underW + 3;
+            cx += drawChem(doc, formula, cx, y, MAIN, SUB);
+            doc.setFontSize(MAIN);
+            if (i === q.bareReactants.length - 1) {
+              doc.text(' \u2192 ', cx, y);
+              cx += arrowW;
+            } else if (i < allBare.length - 1) {
+              doc.text(' + ', cx, y);
+              cx += plusW;
+            }
+          });
+        }
+
+        y += 20;
+        // light separator
+        doc.setDrawColor(230,230,230);
+        doc.setLineWidth(0.3);
+        doc.line(ML, y, PW-MR, y);
+        y += 10;
+      });
+
+      // ══════════════════════════════════════════════
+      // PAGE 2: Answer Key
+      // ══════════════════════════════════════════════
+      doc.addPage();
+      y = drawHeader('Answer Key');
+
+      doc.setFont('helvetica','italic');
+      doc.setFontSize(10);
+      doc.setTextColor(120,120,120);
+      doc.text('Do not distribute to students before the worksheet is completed.', PW/2, y, { align:'center' });
+      y += 20;
+
+      questions.forEach((q, idx) => {
+        const num = idx + 1;
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(MAIN);
+        doc.setTextColor(0,0,0);
+        doc.text(`${num}.`, ML, y);
+
+        if (q.type === 'stoichiometry') {
+          doc.setFont('helvetica','normal');
+          let cx = ML + 18;
+          cx += drawChem(doc, q.givenFormula, cx, y, MAIN, SUB);
+          doc.setFontSize(MAIN);
+          doc.text(`: ${q.givenMoles} mol \u00D7 (${q.findCoeff}/${q.givenCoeff}) = `, cx, y);
+          cx += doc.getStringUnitWidth(`: ${q.givenMoles} mol \u00D7 (${q.findCoeff}/${q.givenCoeff}) = `) * MAIN / doc.internal.scaleFactor;
+          doc.setFont('helvetica','bold');
+          doc.setTextColor(...GREEN);
+          doc.text(`${q.answer} mol`, cx, y);
+          cx += doc.getStringUnitWidth(`${q.answer} mol`) * MAIN / doc.internal.scaleFactor;
+          doc.setTextColor(0,0,0);
+          doc.setFont('helvetica','normal');
+          doc.text(' of ', cx, y);
+          cx += doc.getStringUnitWidth(' of ') * MAIN / doc.internal.scaleFactor;
+          drawChem(doc, q.findFormula, cx, y, MAIN, SUB);
+
+        } else {
+          // Balancing answer — show full balanced equation
+          let cx = ML + 18;
+          const allBare = q.bareReactants.concat(q.bareProducts);
+          const plusW  = doc.getStringUnitWidth(' + ') * MAIN / doc.internal.scaleFactor;
+          const arrowW = doc.getStringUnitWidth(' \u2192 ') * MAIN / doc.internal.scaleFactor;
+          allBare.forEach((formula, i) => {
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(MAIN);
+            doc.setTextColor(...GREEN);
+            doc.text(`${q.coeffs[i]} `, cx, y);
+            cx += doc.getStringUnitWidth(`${q.coeffs[i]} `) * MAIN / doc.internal.scaleFactor;
+            doc.setTextColor(0,0,0);
+            doc.setFont('helvetica','normal');
+            cx += drawChem(doc, formula, cx, y, MAIN, SUB);
+            doc.setFontSize(MAIN);
+            if (i === q.bareReactants.length - 1) {
+              doc.text(' \u2192 ', cx, y);
+              cx += arrowW;
+            } else if (i < allBare.length - 1) {
+              doc.text(' + ', cx, y);
+              cx += plusW;
+            }
+          });
+        }
+
+        y += 16;
+        doc.setDrawColor(230,230,230);
+        doc.setLineWidth(0.3);
+        doc.line(ML, y, PW-MR, y);
+        y += 10;
+      });
+
+      // Save
+      const typeLabel = isStoich ? 'stoichiometry' : 'balancing';
+      doc.save(`worksheet_${typeLabel}_${difficulty}.pdf`);
+      status.textContent = '✓ PDF downloaded!';
+      setTimeout(() => { status.textContent = ''; }, 4000);
+
+    } catch(e) {
+      console.error(e);
+      status.textContent = 'Error generating PDF. See console for details.';
+    }
+  }, 50);
+}
 </script>
 
 </body>
